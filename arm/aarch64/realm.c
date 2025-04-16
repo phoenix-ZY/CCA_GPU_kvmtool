@@ -189,16 +189,16 @@ void kvm_arm_realm_populate_initrd(struct kvm *kvm)
 
 void kvm_arm_realm_populate_dev(struct kvm *kvm)
 {
-	u64 kernel_end, start, end;
+	u64  start, end;
 
-	start = kvm->ram_start;
+	start = ALIGN_DOWN(kvm->arch.memory_guest_start,SZ_4K);
 	/*
 	 * Because we align the initrd to 4 bytes, it is theoretically possible
 	 * for the start of the initrd to overlap with the same page where the
 	 * kernel ends.
 	 */
 
-	end = ALIGN(kvm->ram_size + kvm->arch.ram_alloc_size, SZ_4K);
+	end = ALIGN(kvm->arch.memory_guest_start + kvm->arch.ram_alloc_size, SZ_4K);
 	if (end > start)
 		realm_populate(kvm, start, end - start);
 }

@@ -7,6 +7,7 @@
 
 void kvm_arm_realm_create_realm_descriptor(struct kvm *kvm);
 void kvm_arm_realm_populate_kernel(struct kvm *kvm);
+void kvm_arm_realm_populate_dev(struct kvm *kvm);
 void kvm_arm_realm_populate_initrd(struct kvm *kvm);
 void kvm_arm_realm_populate_dtb(struct kvm *kvm);
 void kvm_arm_attach_dev(struct kvm *kvm);
