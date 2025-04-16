@@ -106,7 +106,8 @@ void kvm__init_ram(struct kvm *kvm)
 		    "address 0x%llx [err %d]", phys_size, phys_start, err);
 
 	kvm->arch.memory_guest_start = phys_start;
-
+	if (kvm->cfg.arch.is_realm)
+		kvm_arm_realm_populate_dev(kvm);
 	pr_debug("RAM created at 0x%llx - 0x%llx",
 		 phys_start, phys_start + phys_size - 1);
 }
