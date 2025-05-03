@@ -159,7 +159,7 @@ void kvm_arm_realm_populate_kernel(struct kvm *kvm)
 
 	start = ALIGN_DOWN(kvm->arch.kern_guest_start, SZ_4K);
 	end = ALIGN(kvm->arch.kern_guest_start + kvm->arch.kern_size, SZ_4K);
-
+	
 	if (is_arm64_linux_kernel_image(header))
 		mem_size = arm64_linux_kernel_image_size(header);
 	else
@@ -198,9 +198,9 @@ void kvm_arm_realm_populate_dev(struct kvm *kvm)
 	 * kernel ends.
 	 */
 
-	end = ALIGN(kvm->arch.memory_guest_start + kvm->arch.ram_alloc_size, SZ_4K);
+	end = ALIGN(kvm->arch.memory_guest_start + min(kvm->ram_size, (u64)SZ_256M) - 1, SZ_4K);
 	if (end > start)
-		realm_populate(kvm, start, end - start);
+		realm_populate_dev(kvm, start, end - start);
 }
 
 void kvm_arm_realm_populate_dtb(struct kvm *kvm)

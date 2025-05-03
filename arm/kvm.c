@@ -46,6 +46,23 @@ static void try_increase_mlock_limit(struct kvm *kvm)
 	setrlimit(RLIMIT_MEMLOCK, &new_limit);
 }
 
+static void __cca_sighandler(int signo, siginfo_t *si, void *data)
+{
+    ucontext_t *uc = (ucontext_t *)data;
+    uc->uc_mcontext.pc += 4; // ARM64调整PC
+
+    printf("\npass HLT\n");
+}
+
+#define CCA_BENCHMARK_INIT                                  \
+    {                                                       \
+        struct sigaction sa, osa;                           \
+        sa.sa_flags = SA_ONSTACK | SA_RESTART | SA_SIGINFO; \
+        sigemptyset(&sa.sa_mask);                           \
+        sa.sa_sigaction = __cca_sighandler;                 \
+        sigaction(SIGILL, &sa, &osa);                       \
+    }
+
 void kvm__init_ram(struct kvm *kvm)
 {
 	u64 phys_start, phys_size;
@@ -106,8 +123,13 @@ void kvm__init_ram(struct kvm *kvm)
 		    "address 0x%llx [err %d]", phys_size, phys_start, err);
 
 	kvm->arch.memory_guest_start = phys_start;
+	memset(kvm->arch.ram_alloc_start, 0, kvm->arch.ram_alloc_size);
+	CCA_BENCHMARK_INIT;
+	__asm__ volatile("hlt 0x1337");
 	if (kvm->cfg.arch.is_realm)
 		kvm_arm_realm_populate_dev(kvm);
+	
+	__asm__ volatile("hlt 0x1337");
 	pr_debug("RAM created at 0x%llx - 0x%llx",
 		 phys_start, phys_start + phys_size - 1);
 }
@@ -169,8 +191,8 @@ bool kvm__arch_load_kernel_image(struct kvm *kvm, int fd_kernel, int fd_initrd,
 	pr_debug("Loaded kernel to 0x%llx (%llu bytes)",
 		 kvm->arch.kern_guest_start, kvm->arch.kern_size);
 
-	if (kvm->cfg.arch.is_realm)
-		kvm_arm_realm_populate_kernel(kvm);
+	// if (kvm->cfg.arch.is_realm)
+	// 	kvm_arm_realm_populate_kernel(kvm);
 
 	/*
 	 * Now load backwards from the end of memory so the kernel
@@ -216,8 +238,8 @@ bool kvm__arch_load_kernel_image(struct kvm *kvm, int fd_kernel, int fd_initrd,
 		pr_debug("Loaded initrd to 0x%llx (%llu bytes)",
 			 kvm->arch.initrd_guest_start, kvm->arch.initrd_size);
 
-		if (kvm->cfg.arch.is_realm)
-			kvm_arm_realm_populate_initrd(kvm);
+		// if (kvm->cfg.arch.is_realm)
+		// 	kvm_arm_realm_populate_initrd(kvm);
 	} else {
 		kvm->arch.initrd_size = 0;
 	}
@@ -290,9 +312,9 @@ bool kvm__load_firmware(struct kvm *kvm, const char *firmware_filename)
 		 kvm->arch.dtb_guest_start,
 		 kvm->arch.dtb_guest_start + FDT_MAX_SIZE);
 
-	if (kvm->cfg.arch.is_realm)
-		/* We hijack the kernel fields to describe the firmware. */
-		kvm_arm_realm_populate_kernel(kvm);
+	// if (kvm->cfg.arch.is_realm)
+	// 	/* We hijack the kernel fields to describe the firmware. */
+	// 	kvm_arm_realm_populate_kernel(kvm);
 
 	return true;
 }
